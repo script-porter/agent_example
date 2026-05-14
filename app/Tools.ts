@@ -148,17 +148,20 @@ export const searchToolQuery = async ({ query }: { query: string }) => {
 export const agentWorkflowTool = {
   type: "function",
   function: {
-    name: "agent_workflow_handler",
-    description: "派发穿行或并行任务给到sub Agent执行",
+    name: "dispatch_sub_agents",
+    description:
+      "将一个或多个子任务派发给独立的子Agent执行，支持串行或并行模式。返回各任务的执行结果。",
     parameters: {
       type: "object",
       properties: {
         systemPrompt: {
           type: "string",
-          description: "subAgent的系统提示词",
+          description:
+            "分发给每个子Agent的统一系统提示词（所有子任务共享此提示词）",
         },
         tasks: {
           type: "array",
+          description: "要执行的子任务列表",
           items: {
             type: "object",
             properties: {
@@ -168,60 +171,24 @@ export const agentWorkflowTool = {
               },
               prompt: {
                 type: "string",
-                description: "任务指令",
+                description: "发送给子Agent的具体任务指令",
+              },
+              nextTaskId: {
+                type: "string",
+                description:
+                  "（仅串行模式）指定下一个要执行的任务ID。若不提供，则默认按tasks数组顺序执行",
               },
             },
             required: ["id", "prompt"],
           },
-          description: "任务列表，顺序影响执行顺序和结果顺序",
         },
-        isSync: {
+        parallel: {
           type: "boolean",
-          description: "任务是否并行执行（如任务间存在依赖，那么值为false）",
+          description:
+            "true表示任务可并行执行；false表示串行执行（用于任务间有依赖的场景）",
         },
       },
-      required: ["systemPrompt", "tasks", "isSync"],
-    },
-    returns: {
-      type: "object",
-      properties: {
-        success: {
-          type: "boolean",
-          description: "任务执行是否成功",
-        },
-        results: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              taskId: {
-                type: "string",
-                description: "任务ID",
-              },
-              result: {
-                type: "string",
-                description: "subAgent执行结果",
-              },
-              status: {
-                type: "string",
-                enum: ["success", "error", "timeout"],
-                description: "任务状态",
-              },
-              error: {
-                type: "string",
-                description: "错误信息（如果失败）",
-              },
-            },
-            required: ["taskId", "result", "status"],
-          },
-          description: "各任务执行结果列表，isSync为false则顺序与输入tasks一致",
-        },
-        totalExecutionTime: {
-          type: "number",
-          description: "总执行耗时（毫秒）",
-        },
-      },
-      required: ["success", "results"],
+      required: ["systemPrompt", "tasks", "parallel"],
     },
   },
 };
@@ -266,13 +233,19 @@ const runTask = async ({
   }
 };
 
+interface Task {
+  id: string;
+  prompt: string;
+  nextTaskId: string;
+}
+
 export const agentWorkflowHandler = async ({
   systemPrompt,
   tasks,
   isSync,
 }: {
   systemPrompt: string;
-  tasks: { id: string; prompt: string }[];
+  tasks: Task[];
   isSync: boolean;
 }) => {
   const taskLsit: any[] = [];
@@ -283,22 +256,29 @@ export const agentWorkflowHandler = async ({
     });
     resultList = await Promise.all(taskLsit);
   } else {
-    tasks.forEach(async (item, index) => {
+    let excuterCount = 0;
+
+    while (excuterCount != tasks.length) {
       try {
-        const res = await runTask({ systemPrompt, subTask: item.prompt });
-        resultList[index] = {
-          ...item,
+        const currentTask = tasks[excuterCount] as Task;
+        const current = tasks.find(({ id }) => id === currentTask.nextTaskId);
+        const res = await runTask({
+          systemPrompt,
+          subTask: currentTask.prompt,
+        });
+        excuterCount += 1;
+        resultList[excuterCount] = {
+          ...current,
           status: "success",
           result: res,
         };
       } catch (error) {
-        resultList[index] = {
-          ...item,
+        resultList[excuterCount] = {
           status: "error",
           error: (error as any).message,
         };
       }
-    });
+    }
   }
 };
 

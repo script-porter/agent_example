@@ -12,6 +12,7 @@
   "license": "ISC",
   "dependencies": {
     "@tavily/core": "^0.7.3",
+    "express": "^5.2.1",
     "openai": "^6.37.0",
     "typescript": "^6.0.3"
   },
