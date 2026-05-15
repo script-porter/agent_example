@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ReactFlow,
   Background,
@@ -31,10 +31,11 @@ import {
 } from "./types/nodes";
 import { mockFlowData } from "./mock/data";
 import { useAlignmentGuides } from "./hooks/useAlignmentGuides";
+import { useFlowApi } from "./hooks/useExecuteFlow";
 
-// ========== 从 Mock 数据加载初始节点与连线 ==========
-const initialNodes: Node[] = mockFlowData.nodes;
-const initialEdges: Edge[] = mockFlowData.edges;
+// ========== 默认回退数据（API 不可用时使用 Mock） ==========
+const fallbackNodes: Node[] = mockFlowData.nodes;
+const fallbackEdges: Edge[] = mockFlowData.edges;
 
 // ========== 注册自定义节点类型（模块级，避免重复创建） ==========
 const nodeTypes: NodeTypes = {
@@ -46,15 +47,54 @@ const nodeTypes: NodeTypes = {
 };
 
 export default function App() {
-  const [nodes, setNodes, baseOnNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [nodes, setNodes, baseOnNodesChange] = useNodesState(fallbackNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(fallbackEdges);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [currentFlowId, setCurrentFlowId] = useState<string | null>(null);
+  const [dataLoading, setDataLoading] = useState(true);
 
   // ========== 标线系统 ==========
   const { guides, snapPosition, clearGuides, syncNodes } = useAlignmentGuides();
 
+  // ========== API 操作 ==========
+  const { flows, loading, error, fetchFlows, fetchFlowById, executeFlow } =
+    useFlowApi();
+
   // 每次 nodes 变更后同步到 hook
   syncNodes(nodes);
+
+  // ========== 首次加载：从 API 获取编排数据 ==========
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      await fetchFlows();
+      if (cancelled) return;
+      // 加载第一个流程的数据到画布
+      setFlowsData();
+    }
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  // flows 加载完成后更新画布
+  useEffect(() => {
+    if (flows.length > 0 && dataLoading) {
+      setFlowsData();
+    }
+  }, [flows]);
+
+  const setFlowsData = useCallback(() => {
+    if (flows.length > 0) {
+      const first = flows[0];
+      setNodes(first.nodes);
+      setEdges(first.edges);
+      setCurrentFlowId(first.id);
+      setDataLoading(false);
+    } else if (!loading && flows.length === 0) {
+      // API 无数据，使用 fallback
+      setDataLoading(false);
+    }
+  }, [flows, loading, setNodes, setEdges]);
 
   // 包装 onNodesChange：在拖拽时应用对齐吸附
   const onNodesChange = useCallback(
@@ -125,7 +165,10 @@ export default function App() {
       {
         id,
         type: "agentGroup",
-        position: { x: Math.random() * 300 + 100, y: Math.random() * 300 + 100 },
+        position: {
+          x: Math.random() * 300 + 100,
+          y: Math.random() * 300 + 100,
+        },
         data: { ...defaultAgentData, label: `新 Agent ${id.slice(-4)}` },
       },
     ]);
@@ -139,7 +182,10 @@ export default function App() {
       {
         id,
         type: "modelNode",
-        position: { x: Math.random() * 400 + 100, y: Math.random() * 400 + 100 },
+        position: {
+          x: Math.random() * 400 + 100,
+          y: Math.random() * 400 + 100,
+        },
         data: { ...defaultModelData, label: `模型 ${id.slice(-4)}` },
       },
     ]);
@@ -153,7 +199,10 @@ export default function App() {
       {
         id,
         type: "toolNode",
-        position: { x: Math.random() * 400 + 100, y: Math.random() * 400 + 100 },
+        position: {
+          x: Math.random() * 400 + 100,
+          y: Math.random() * 400 + 100,
+        },
         data: { ...defaultToolData, label: `工具 ${id.slice(-4)}` },
       },
     ]);
@@ -178,7 +227,10 @@ export default function App() {
       {
         id: `start-${Date.now()}`,
         type: "startNode",
-        position: { x: Math.random() * 300 + 100, y: Math.random() * 300 + 100 },
+        position: {
+          x: Math.random() * 300 + 100,
+          y: Math.random() * 300 + 100,
+        },
         data: {},
       },
     ]);
@@ -191,7 +243,10 @@ export default function App() {
       {
         id: `end-${Date.now()}`,
         type: "endNode",
-        position: { x: Math.random() * 300 + 100, y: Math.random() * 300 + 100 },
+        position: {
+          x: Math.random() * 300 + 100,
+          y: Math.random() * 300 + 100,
+        },
         data: {},
       },
     ]);
@@ -199,6 +254,14 @@ export default function App() {
 
   const nodeCount = nodes.length;
   const edgeCount = edges.length;
+
+  const callExecuteFlow = useCallback(() => {
+    executeFlow(nodes, edges);
+  }, [executeFlow, nodes, edges]);
+
+  useEffect(() => {
+    console.log("[nodes]", { id: "", nodes, edges });
+  }, [nodes, edges]);
 
   return (
     <div className="flex h-screen w-screen overflow-hidden">
@@ -267,6 +330,7 @@ export default function App() {
           node={selectedNode}
           onClose={() => setSelectedNodeId(null)}
           onUpdate={updateNodeData}
+          onExecute={callExecuteFlow}
         />
       )}
     </div>

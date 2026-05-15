@@ -1,0 +1,242 @@
+[
+  {
+    "id": "flow_001",
+    "name": "智能客服编排",
+    "description": "用户问题 → 意图解析 → 知识检索 → 回复生成 的标准客服 Agent 流水线",
+    "createdAt": "2025-12-01T08:00:00.000Z",
+    "updatedAt": "2026-05-14T10:30:00.000Z",
+    "nodes": [
+      {
+        "id": "start",
+        "type": "startNode",
+        "position": { "x": 430, "y": -130 },
+        "data": {}
+      },
+      {
+        "id": "agent-1",
+        "type": "agentGroup",
+        "position": { "x": 80, "y": 50 },
+        "data": {
+          "label": "输入解析 Agent",
+          "description": "解析用户输入，拆解为子任务并分发给下游",
+          "status": "idle"
+        }
+      },
+      {
+        "id": "m-11",
+        "type": "modelNode",
+        "position": { "x": 400, "y": 20 },
+        "data": {
+          "label": "意图识别",
+          "provider": "openai",
+          "modelName": "gpt-4o",
+          "temperature": 0.3,
+          "maxTokens": 2048
+        }
+      },
+      {
+        "id": "t-11",
+        "type": "toolNode",
+        "position": { "x": 400, "y": 140 },
+        "data": {
+          "label": "文本预处理",
+          "toolType": "web_search",
+          "description": "对输入文本进行清洗、分词和实体识别",
+          "config": "{}"
+        }
+      },
+      {
+        "id": "t-12",
+        "type": "toolNode",
+        "position": { "x": 620, "y": 80 },
+        "data": {
+          "label": "任务拆分器",
+          "toolType": "code_executor",
+          "description": "将复杂任务拆分为可执行的子任务序列",
+          "config": "{}"
+        }
+      },
+      {
+        "id": "agent-2",
+        "type": "agentGroup",
+        "position": { "x": 80, "y": 310 },
+        "data": {
+          "label": "知识检索 Agent",
+          "description": "从知识库和外部数据源检索相关信息",
+          "status": "idle"
+        }
+      },
+      {
+        "id": "m-21",
+        "type": "modelNode",
+        "position": { "x": 400, "y": 290 },
+        "data": {
+          "label": "语义匹配",
+          "provider": "google",
+          "modelName": "gemini-2.0-flash",
+          "temperature": 0.5,
+          "maxTokens": 4096
+        }
+      },
+      {
+        "id": "t-21",
+        "type": "toolNode",
+        "position": { "x": 400, "y": 410 },
+        "data": {
+          "label": "向量检索",
+          "toolType": "database",
+          "description": "基于向量相似度的知识库检索工具",
+          "config": "{}"
+        }
+      },
+      {
+        "id": "agent-3",
+        "type": "agentGroup",
+        "position": { "x": 80, "y": 580 },
+        "data": {
+          "label": "结果汇总 Agent",
+          "description": "聚合各子 Agent 的输出，生成最终回复",
+          "status": "idle"
+        }
+      },
+      {
+        "id": "m-31",
+        "type": "modelNode",
+        "position": { "x": 400, "y": 560 },
+        "data": {
+          "label": "内容润色",
+          "provider": "anthropic",
+          "modelName": "claude-3-sonnet",
+          "temperature": 0.7,
+          "maxTokens": 8192
+        }
+      },
+      {
+        "id": "t-31",
+        "type": "toolNode",
+        "position": { "x": 400, "y": 680 },
+        "data": {
+          "label": "格式转换",
+          "toolType": "code_executor",
+          "description": "将结果转换为指定格式（JSON/Markdown/表格）",
+          "config": "{}"
+        }
+      },
+      {
+        "id": "end",
+        "type": "endNode",
+        "position": { "x": 430, "y": 830 },
+        "data": {}
+      }
+    ],
+    "edges": [
+      { "id": "e-start-a1", "source": "start", "target": "agent-1", "animated": true, "style": { "stroke": "#10b981", "strokeWidth": 2.5 } },
+      { "id": "e-a1-a2", "source": "agent-1", "target": "agent-2", "animated": true, "style": { "stroke": "#6366f1", "strokeWidth": 2.5 } },
+      { "id": "e-a2-a3", "source": "agent-2", "target": "agent-3", "animated": true, "style": { "stroke": "#6366f1", "strokeWidth": 2.5 } },
+      { "id": "e-a3-end", "source": "agent-3", "target": "end", "animated": true, "style": { "stroke": "#f43f5e", "strokeWidth": 2.5 } },
+      { "id": "e-a1-m11", "source": "agent-1", "target": "m-11", "animated": true, "style": { "stroke": "#10b981", "strokeWidth": 2 } },
+      { "id": "e-a1-t11", "source": "agent-1", "target": "t-11", "animated": true, "style": { "stroke": "#f59e0b", "strokeWidth": 2 } },
+      { "id": "e-a1-t12", "source": "agent-1", "target": "t-12", "animated": true, "style": { "stroke": "#f59e0b", "strokeWidth": 2 } },
+      { "id": "e-a2-m21", "source": "agent-2", "target": "m-21", "animated": true, "style": { "stroke": "#10b981", "strokeWidth": 2 } },
+      { "id": "e-a2-t21", "source": "agent-2", "target": "t-21", "animated": true, "style": { "stroke": "#f59e0b", "strokeWidth": 2 } },
+      { "id": "e-a3-m31", "source": "agent-3", "target": "m-31", "animated": true, "style": { "stroke": "#10b981", "strokeWidth": 2 } },
+      { "id": "e-a3-t31", "source": "agent-3", "target": "t-31", "animated": true, "style": { "stroke": "#f59e0b", "strokeWidth": 2 } }
+    ]
+  },
+  {
+    "id": "flow_002",
+    "name": "文档处理流水线",
+    "description": "上传文档 → 内容提取 → 结构化输出 的自动化文档处理流程",
+    "createdAt": "2026-01-15T02:00:00.000Z",
+    "updatedAt": "2026-05-14T09:00:00.000Z",
+    "nodes": [
+      {
+        "id": "start",
+        "type": "startNode",
+        "position": { "x": 430, "y": -130 },
+        "data": {}
+      },
+      {
+        "id": "agent-1",
+        "type": "agentGroup",
+        "position": { "x": 80, "y": 50 },
+        "data": {
+          "label": "文档解析 Agent",
+          "description": "解析上传的 PDF/Word 文档，提取文本和表格数据",
+          "status": "idle"
+        }
+      },
+      {
+        "id": "m-11",
+        "type": "modelNode",
+        "position": { "x": 400, "y": 20 },
+        "data": {
+          "label": "OCR 识别",
+          "provider": "google",
+          "modelName": "gemini-2.0-flash",
+          "temperature": 0.1,
+          "maxTokens": 4096
+        }
+      },
+      {
+        "id": "t-11",
+        "type": "toolNode",
+        "position": { "x": 400, "y": 140 },
+        "data": {
+          "label": "文档读取",
+          "toolType": "file_reader",
+          "description": "读取并解析多种格式的文档文件",
+          "config": "{}"
+        }
+      },
+      {
+        "id": "agent-2",
+        "type": "agentGroup",
+        "position": { "x": 80, "y": 310 },
+        "data": {
+          "label": "内容结构化 Agent",
+          "description": "将非结构化文本转换为结构化数据并输出",
+          "status": "idle"
+        }
+      },
+      {
+        "id": "m-21",
+        "type": "modelNode",
+        "position": { "x": 400, "y": 290 },
+        "data": {
+          "label": "实体抽取",
+          "provider": "anthropic",
+          "modelName": "claude-3-sonnet",
+          "temperature": 0.2,
+          "maxTokens": 4096
+        }
+      },
+      {
+        "id": "t-21",
+        "type": "toolNode",
+        "position": { "x": 400, "y": 410 },
+        "data": {
+          "label": "JSON 输出",
+          "toolType": "code_executor",
+          "description": "将结构化数据格式化输出为 JSON",
+          "config": "{}"
+        }
+      },
+      {
+        "id": "end",
+        "type": "endNode",
+        "position": { "x": 430, "y": 560 },
+        "data": {}
+      }
+    ],
+    "edges": [
+      { "id": "e-start-a1", "source": "start", "target": "agent-1", "animated": true, "style": { "stroke": "#10b981", "strokeWidth": 2.5 } },
+      { "id": "e-a1-a2", "source": "agent-1", "target": "agent-2", "animated": true, "style": { "stroke": "#6366f1", "strokeWidth": 2.5 } },
+      { "id": "e-a2-end", "source": "agent-2", "target": "end", "animated": true, "style": { "stroke": "#f43f5e", "strokeWidth": 2.5 } },
+      { "id": "e-a1-m11", "source": "agent-1", "target": "m-11", "animated": true, "style": { "stroke": "#10b981", "strokeWidth": 2 } },
+      { "id": "e-a1-t11", "source": "agent-1", "target": "t-11", "animated": true, "style": { "stroke": "#f59e0b", "strokeWidth": 2 } },
+      { "id": "e-a2-m21", "source": "agent-2", "target": "m-21", "animated": true, "style": { "stroke": "#10b981", "strokeWidth": 2 } },
+      { "id": "e-a2-t21", "source": "agent-2", "target": "t-21", "animated": true, "style": { "stroke": "#f59e0b", "strokeWidth": 2 } }
+    ]
+  }
+]

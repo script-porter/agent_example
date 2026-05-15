@@ -1,23 +1,27 @@
 import express from "express";
 import setupConfig from "./injectConfig";
+import flowRouter from "./router/agent.route";
 
 setupConfig();
 
-const app = express();
+const app: express.Express = express();
 
 app.use(express.json());
 
 app.use(express.urlencoded({ extended: true }));
 
-app.use(express.static("public"));
+// ========== 路由挂载 ==========
 
 const router = express.Router();
 
-router.get("/", (req, res) => {
+router.get("/", (_req, res) => {
   res.send("Hello World!");
 });
 
 app.use(router);
+app.use("/flow", flowRouter);
+
+// ========== 启动服务 ==========
 
 const server = app.listen(5000, () => {
   const address = server?.address() as any;
@@ -27,3 +31,5 @@ const server = app.listen(5000, () => {
 
   console.log(`\x1B[34mhttp://${host}:${port}`, "\x1B[0m");
 });
+
+export default app;

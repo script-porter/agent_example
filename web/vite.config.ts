@@ -7,6 +7,12 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true,
+    proxy: {
+      "/flow": {
+        target: "http://localhost:5000",
+        changeOrigin: true,
+      },
+    },
   },
   resolve: {
     alias: {
