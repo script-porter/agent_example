@@ -31,7 +31,9 @@ export function useFlowApi() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/flow");
+      const res = await fetch(`/flow`);
+      console.log('Flow/nodes',res);
+
       const json: ApiResponse<FlowItem[]> = await res.json();
       if (json.code === 0) {
         setFlows(json.data);
@@ -46,68 +48,80 @@ export function useFlowApi() {
   }, []);
 
   // ---------- GET /flow/:id ----------
-  const fetchFlowById = useCallback(async (id: string): Promise<FlowItem | null> => {
-    try {
-      const res = await fetch(`/flow/${id}`);
-      const json: ApiResponse<FlowItem> = await res.json();
-      return json.code === 0 ? json.data : null;
-    } catch {
-      return null;
-    }
-  }, []);
+  const fetchFlowById = useCallback(
+    async (id: string): Promise<FlowItem | null> => {
+      try {
+        const res = await fetch(`/flow/${id}`);
+        const json: ApiResponse<FlowItem> = await res.json();
+        return json.code === 0 ? json.data : null;
+      } catch {
+        return null;
+      }
+    },
+    [],
+  );
 
   // ---------- POST /flow —— 新建流程 ----------
-  const createFlow = useCallback(async (data: Partial<FlowItem>): Promise<FlowItem | null> => {
-    try {
-      const res = await fetch("/flow", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      const json: ApiResponse<FlowItem> = await res.json();
-      if (json.code === 0) {
-        setFlows((prev) => [...prev, json.data]);
-        return json.data;
+  const createFlow = useCallback(
+    async (data: Partial<FlowItem>): Promise<FlowItem | null> => {
+      try {
+        const res = await fetch("/flow", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+        const json: ApiResponse<FlowItem> = await res.json();
+        if (json.code === 0) {
+          setFlows((prev) => [...prev, json.data]);
+          return json.data;
+        }
+        return null;
+      } catch {
+        return null;
       }
-      return null;
-    } catch {
-      return null;
-    }
-  }, []);
+    },
+    [],
+  );
 
   // ---------- PUT /flow/:id —— 更新流程 ----------
-  const updateFlow = useCallback(async (id: string, data: Partial<FlowItem>): Promise<FlowItem | null> => {
-    try {
-      const res = await fetch(`/flow/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      const json: ApiResponse<FlowItem> = await res.json();
-      if (json.code === 0) {
-        setFlows((prev) => prev.map((f) => (f.id === id ? json.data : f)));
-        return json.data;
+  const updateFlow = useCallback(
+    async (id: string, data: Partial<FlowItem>): Promise<FlowItem | null> => {
+      try {
+        const res = await fetch(`/flow/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+        const json: ApiResponse<FlowItem> = await res.json();
+        if (json.code === 0) {
+          setFlows((prev) => prev.map((f) => (f.id === id ? json.data : f)));
+          return json.data;
+        }
+        return null;
+      } catch {
+        return null;
       }
-      return null;
-    } catch {
-      return null;
-    }
-  }, []);
+    },
+    [],
+  );
 
   // ---------- PUT /flow/:id (轻量：仅 nodes+edges) ----------
-  const saveFlowNodesEdges = useCallback(async (id: string, nodes: Node[], edges: Edge[]): Promise<boolean> => {
-    try {
-      const res = await fetch(`/flow/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nodes, edges }),
-      });
-      const json = await res.json();
-      return json.code === 0;
-    } catch {
-      return false;
-    }
-  }, []);
+  const saveFlowNodesEdges = useCallback(
+    async (id: string, nodes: Node[], edges: Edge[]): Promise<boolean> => {
+      try {
+        const res = await fetch(`/flow/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nodes, edges }),
+        });
+        const json = await res.json();
+        return json.code === 0;
+      } catch {
+        return false;
+      }
+    },
+    [],
+  );
 
   // ---------- DELETE /flow/:id ----------
   const deleteFlow = useCallback(async (id: string): Promise<boolean> => {
@@ -125,24 +139,27 @@ export function useFlowApi() {
   }, []);
 
   // ---------- POST /flow/execute —— 执行编排 ----------
-  const executeFlow = useCallback(async (nodes: Node[], edges: Edge[]): Promise<void> => {
-    controllerRef.current?.abort();
-    controllerRef.current = new AbortController();
+  const executeFlow = useCallback(
+    async (nodes: Node[], edges: Edge[]): Promise<void> => {
+      controllerRef.current?.abort();
+      controllerRef.current = new AbortController();
 
-    try {
-      const res = await fetch("/flow/execute", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nodes, edges }),
-        signal: controllerRef.current.signal,
-      });
-      await res.text();
-    } catch (err: any) {
-      if (err.name !== "AbortError") {
-        console.error("执行编排失败:", err);
+      try {
+        const res = await fetch("/flow/execute", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nodes, edges }),
+          signal: controllerRef.current.signal,
+        });
+        await res.text();
+      } catch (err: any) {
+        if (err.name !== "AbortError") {
+          console.error("执行编排失败:", err);
+        }
       }
-    }
-  }, []);
+    },
+    [],
+  );
 
   return {
     flows,

@@ -1,6 +1,8 @@
 import express from "express";
 import setupConfig from "./injectConfig";
 import flowRouter from "./router/agent.route";
+import chatRouter from "./router/chat.route";
+import { SkillLoader } from "./SkillLoader";
 
 setupConfig();
 
@@ -20,6 +22,7 @@ router.get("/", (_req, res) => {
 
 app.use(router);
 app.use("/flow", flowRouter);
+app.use("/chat", chatRouter);
 
 // ========== 启动服务 ==========
 

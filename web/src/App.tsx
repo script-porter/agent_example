@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { App as AntdApp } from "antd";
 import {
   ReactFlow,
   Background,
@@ -16,6 +17,7 @@ import {
   useEdgesState,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { ApartmentOutlined, MessageOutlined } from "@ant-design/icons";
 import AgentGroupNode from "./components/AgentGroupNode";
 import ModelNode from "./components/ModelNode";
 import ToolNode from "./components/ToolNode";
@@ -24,6 +26,7 @@ import EndNode from "./components/EndNode";
 import GuideOverlay from "./components/GuideOverlay";
 import Sidebar from "./components/Sidebar";
 import Toolbar from "./components/Toolbar";
+import ChatPage from "./ChatPage";
 import {
   defaultAgentData,
   defaultModelData,
@@ -52,6 +55,7 @@ export default function App() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [currentFlowId, setCurrentFlowId] = useState<string | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState<"flow" | "chat">("flow");
 
   // ========== 标线系统 ==========
   const { guides, snapPosition, clearGuides, syncNodes } = useAlignmentGuides();
@@ -260,79 +264,126 @@ export default function App() {
   }, [executeFlow, nodes, edges]);
 
   useEffect(() => {
-    console.log("[nodes]", { id: "", nodes, edges });
+    // nodes/edges 变更时记录（可扩展为自动保存）
   }, [nodes, edges]);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden">
-      {/* 左侧工具栏 */}
-      <Toolbar
-        onAddAgent={addAgentNode}
-        onAddModel={addModelNode}
-        onAddTool={addToolNode}
-        onAddStart={addStartNode}
-        onAddEnd={addEndNode}
-        onDeleteSelected={deleteSelectedNode}
-        hasSelection={!!selectedNodeId}
-      />
-
-      {/* 中间画布 */}
-      <div className="flex-1 relative">
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onNodeClick={onNodeClick}
-          onPaneClick={onPaneClick}
-          nodeTypes={nodeTypes}
-          connectionMode={ConnectionMode.Loose}
-          fitView
-          deleteKeyCode={["Backspace", "Delete"]}
-        >
-          {/* 标线图层 */}
-          <GuideOverlay lines={guides} />
-          <Background color="#e5e7eb" gap={20} />
-          <Controls className="!rounded-lg !shadow-md !border !border-gray-200" />
-          <MiniMap
-            className="!rounded-lg !shadow-md !border !border-gray-200"
-            nodeColor={(n) =>
-              n.selected
-                ? "#6366f1"
-                : n.type === "startNode"
-                  ? "#6ee7b7"
-                  : n.type === "endNode"
-                    ? "#fda4af"
-                    : n.type === "modelNode"
-                      ? "#6ee7b7"
-                      : n.type === "toolNode"
-                        ? "#fcd34d"
-                        : "#c7d2fe"
-            }
-            maskColor="rgba(0,0,0,0.05)"
-          />
-          <Panel position="top-right" className="flex gap-3">
-            <div className="bg-white/80 backdrop-blur rounded-lg shadow-sm border border-gray-200 px-4 py-2 text-sm text-gray-500">
-              节点:{" "}
-              <span className="font-semibold text-indigo-600">{nodeCount}</span>
-              <span className="mx-2">|</span>
-              连线:{" "}
-              <span className="font-semibold text-indigo-600">{edgeCount}</span>
+    <AntdApp>
+      <div className="flex flex-col h-screen w-screen overflow-hidden">
+        {/* ======== 顶部导航栏 ======== */}
+        <div className="flex-shrink-0 h-11 bg-white border-b border-gray-200 flex items-center px-4 gap-0 select-none">
+          <div className="flex items-center gap-2 mr-6">
+            <div className="w-6 h-6 rounded-md bg-indigo-500 flex items-center justify-center">
+              <span className="text-white font-bold text-[10px]">AO</span>
             </div>
-          </Panel>
-        </ReactFlow>
-      </div>
+            <span className="text-sm font-bold text-gray-800">Agent 编排平台</span>
+          </div>
+          <nav className="flex h-full">
+            <button
+              onClick={() => setCurrentPage("flow")}
+              className={`
+                flex items-center gap-1.5 px-4 h-full text-sm font-medium transition-colors border-b-[3px] -mb-px
+                ${currentPage === "flow"
+                  ? "text-indigo-600 border-indigo-500"
+                  : "text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300"
+                }
+              `}
+            >
+              <ApartmentOutlined />
+              编排
+            </button>
+            <button
+              onClick={() => setCurrentPage("chat")}
+              className={`
+                flex items-center gap-1.5 px-4 h-full text-sm font-medium transition-colors border-b-[3px] -mb-px
+                ${currentPage === "chat"
+                  ? "text-indigo-600 border-indigo-500"
+                  : "text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300"
+                }
+              `}
+            >
+              <MessageOutlined />
+              对话
+            </button>
+          </nav>
+        </div>
 
-      {/* 右侧属性面板 */}
-      {selectedNode && (
-        <Sidebar
-          node={selectedNode}
-          onClose={() => setSelectedNodeId(null)}
-          onUpdate={updateNodeData}
-          onExecute={callExecuteFlow}
-        />
-      )}
-    </div>
+        {/* ======== 页面内容 ======== */}
+        <div className="flex-1 overflow-hidden">
+          {currentPage === "flow" ? (
+            <div className="flex h-full">
+              <Toolbar
+                onAddAgent={addAgentNode}
+                onAddModel={addModelNode}
+                onAddTool={addToolNode}
+                onAddStart={addStartNode}
+                onAddEnd={addEndNode}
+                onDeleteSelected={deleteSelectedNode}
+                hasSelection={!!selectedNodeId}
+              />
+
+              <div className="flex-1 relative">
+                <ReactFlow
+                  nodes={nodes}
+                  edges={edges}
+                  onNodesChange={onNodesChange}
+                  onEdgesChange={onEdgesChange}
+                  onConnect={onConnect}
+                  onNodeClick={onNodeClick}
+                  onPaneClick={onPaneClick}
+                  nodeTypes={nodeTypes}
+                  connectionMode={ConnectionMode.Loose}
+                  fitView
+                  deleteKeyCode={["Backspace", "Delete"]}
+                >
+                  <GuideOverlay lines={guides} />
+                  <Background color="#e5e7eb" gap={20} />
+                  <Controls className="!rounded-lg !shadow-md !border !border-gray-200" />
+                  <MiniMap
+                    className="!rounded-lg !shadow-md !border !border-gray-200"
+                    nodeColor={(n) =>
+                      n.selected
+                        ? "#6366f1"
+                        : n.type === "startNode"
+                          ? "#6ee7b7"
+                          : n.type === "endNode"
+                            ? "#fda4af"
+                            : n.type === "modelNode"
+                              ? "#6ee7b7"
+                              : n.type === "toolNode"
+                                ? "#fcd34d"
+                                : "#c7d2fe"
+                    }
+                    maskColor="rgba(0,0,0,0.05)"
+                  />
+                  <Panel position="top-right" className="flex gap-3">
+                    <div className="bg-white/80 backdrop-blur rounded-lg shadow-sm border border-gray-200 px-4 py-2 text-sm text-gray-500">
+                      节点:{" "}
+                      <span className="font-semibold text-indigo-600">{nodeCount}</span>
+                      <span className="mx-2">|</span>
+                      连线:{" "}
+                      <span className="font-semibold text-indigo-600">{edgeCount}</span>
+                    </div>
+                  </Panel>
+                </ReactFlow>
+              </div>
+
+              {selectedNode && (
+                <Sidebar
+                  node={selectedNode}
+                  onClose={() => setSelectedNodeId(null)}
+                  onUpdate={updateNodeData}
+                  onExecute={callExecuteFlow}
+                />
+              )}
+            </div>
+          ) : (
+            <div className="h-full">
+              <ChatPage />
+            </div>
+          )}
+        </div>
+      </div>
+    </AntdApp>
   );
 }

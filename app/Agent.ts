@@ -3,6 +3,7 @@ import Model from "./enums";
 import { ChatCompletionMessageParam, ReasoningEffort } from "openai/resources";
 import { toolMaps } from "./Tools";
 import { COMPRESS_PROMPT } from "./prompt/compressPrompt";
+import { SkillLoader } from "./SkillLoader";
 
 interface ToolCall {
   id: string;
@@ -34,6 +35,10 @@ class Agent {
 
   private temperature: number = 0.7;
 
+  private isEnableSkill: boolean = true;
+
+  private skillLoader: SkillLoader = new SkillLoader();
+
   constructor(
     private url: string,
     private model: Model,
@@ -45,6 +50,7 @@ class Agent {
       reasoning_effort?: ReasoningEffort;
       thinking?: boolean;
       max_tokens?: number;
+      isEnableSkill?: boolean;
     },
   ) {
     this.client = new OpenAI({
@@ -52,6 +58,7 @@ class Agent {
       apiKey: this.apiKey,
     });
     if (this.systemPrompt?.length) {
+      if (this.systemPrompt[0]?.content) this.injectSkills();
       this.history.push(...this.systemPrompt);
     }
 
@@ -60,7 +67,30 @@ class Agent {
       this.thinking = this.options.thinking ? "enabled" : "disabled";
       this.maxTokens = this.options.max_tokens || 1024;
       this.temperature = this.options.temperature || 0.7;
+      this.isEnableSkill = this.options.isEnableSkill || true;
     }
+  }
+
+  // 注入技能Skill
+  private injectSkills() {
+    if (!this.systemPrompt?.[0]?.content) return;
+    this.systemPrompt[0].content = this.isEnableSkill
+      ? `
+        ${this.systemPrompt[0]?.content}
+
+        ## 技能列表
+        
+        - 你可以使用如下技能：
+
+        ${this.skillLoader.skills
+          .map(
+            (skill, index) => `
+          ${index + 1}. ${skill.name}： ${skill.description}
+        `,
+          )
+          .join("\n")}
+      `
+      : this.systemPrompt[0]?.content;
   }
 
   /** 将消息加入历史记录 */
