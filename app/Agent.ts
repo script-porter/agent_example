@@ -59,6 +59,8 @@ class Agent {
     });
     if (this.systemPrompt?.length) {
       if (this.systemPrompt[0]?.content) this.injectSkills();
+      console.log("系统提示词", this.systemPrompt[0]?.content);
+
       this.history.push(...this.systemPrompt);
     }
 
@@ -115,6 +117,7 @@ class Agent {
     let response: any = null!;
 
     try {
+      this.client;
       response = await this.client.chat.completions.create(
         {
           model: this.model,

@@ -50,7 +50,7 @@ router.get("/sse", async (req, res) => {
 
   const agent = new Agent(
     process.env.DEEPSEEK_API_URL,
-    Model.DeepseekPro,
+    Model.DeepseekFlash,
     process.env.DEEPSEEK_API_KEY,
     [
       {

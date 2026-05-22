@@ -2,7 +2,6 @@ import express from "express";
 import setupConfig from "./injectConfig";
 import flowRouter from "./router/agent.route";
 import chatRouter from "./router/chat.route";
-import { SkillLoader } from "./SkillLoader";
 
 setupConfig();
 
