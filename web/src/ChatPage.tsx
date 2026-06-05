@@ -26,81 +26,36 @@ const RoleAvatar = ({ role }: { role: "user" | "ai" }) => (
   </span>
 );
 
-// ========== SSE 流式请求 ==========
-async function fetchSSE(
+// ========== SSE 流式请求（EventSource） ==========
+function connectSSE(
   message: string,
   onChunk: (text: string) => void,
   onDone: () => void,
   onError: (err: string) => void,
-  signal: AbortSignal,
-) {
-  try {
-    const res = await fetch(
-      `http://localhost:5000/chat/sse?message=${encodeURIComponent(message)}`,
-      {
-        method: "GET",
-        signal,
-      },
-    );
+): EventSource {
+  const url = `http://localhost:5000/chat/sse?message=${encodeURIComponent(message)}`;
+  const es = new EventSource(url);
 
-    if (!res.ok) {
-      onError(`请求失败: HTTP ${res.status}`);
-      return;
-    }
-
-    const reader = res.body?.getReader();
-    if (!reader) {
-      onError("浏览器不支持流式读取");
-      return;
-    }
-
-    const decoder = new TextDecoder();
-    let buffer = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-
-      // 解析 SSE 事件：event: greeting\ndata: {...}\n\n
-      const lines = buffer.split("\n");
-      buffer = ""; // 重置，下面会重新收集不完整行
-
-      let currentEvent = "";
-      for (const line of lines) {
-        if (line.startsWith("event: ")) {
-          currentEvent = line.slice(7).trim();
-        } else if (line.startsWith("data: ")) {
-          const dataStr = line.slice(6).trim();
-          if (currentEvent === "greeting") {
-            try {
-              const payload = JSON.parse(dataStr);
-              if (payload.type === "text" && payload.data) {
-                onChunk(payload.data);
-              } else if (payload.type === "done") {
-                onDone();
-                return;
-              }
-            } catch {
-              // JSON 解析失败，跳过
-            }
-          }
-        } else if (line === "") {
-          currentEvent = "";
-        } else {
-          // 可能是不完整的行，放回 buffer
-          buffer += line + "\n";
-        }
+  es.addEventListener("greeting", (e: MessageEvent) => {
+    try {
+      const payload = JSON.parse(e.data);
+      if (payload.type === "text" && payload.data) {
+        onChunk(payload.data);
+      } else if (payload.type === "done") {
+        es.close();
+        onDone();
       }
+    } catch {
+      // JSON 解析失败，跳过
     }
+  });
 
-    // 流结束但未收到 done 事件
-    onDone();
-  } catch (err: any) {
-    if (err.name === "AbortError") return;
-    onError(err.message || "网络错误");
-  }
+  es.addEventListener("error", () => {
+    es.close();
+    onError("SSE 连接错误");
+  });
+
+  return es;
 }
 
 // ========== 组件 ==========
@@ -110,7 +65,7 @@ export default function ChatPage() {
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
-  const abortRef = useRef<AbortController | null>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
   const senderRef = useRef<SenderRef>(null!);
   const [currentUpdateInputId, setCurrentUpdateInputId] = useState("");
 
@@ -182,15 +137,13 @@ export default function ChatPage() {
       }
 
       // 取消上一次请求
-      abortRef.current?.abort();
-      const controller = new AbortController();
-      abortRef.current = controller;
+      eventSourceRef.current?.close();
 
       senderRef.current?.clear();
       setCurrentUpdateInputId("");
 
-      // SSE 流式请求
-      await fetchSSE(
+      // SSE 流式请求（EventSource）
+      const es = connectSSE(
         text,
         // onChunk: 逐块更新 AI 消息
         (chunk) => {
@@ -234,8 +187,8 @@ export default function ChatPage() {
             ),
           );
         },
-        controller.signal,
       );
+      eventSourceRef.current = es;
     },
     [activeConvId, loading],
   );
@@ -298,7 +251,6 @@ export default function ChatPage() {
   }, []);
 
   const handleCancel = useCallback(() => {
-    abortRef.current?.abort();
     setLoading(false);
   }, []);
 

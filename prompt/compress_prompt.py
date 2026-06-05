@@ -1,4 +1,4 @@
-export const COMPRESS_PROMPT = `
+COMPRESS_PROMPT = """
     你是一个专业的上下文压缩助手。你的任务是将一段对话历史压缩为一份简洁的摘要，以便在下一次对话中作为短期记忆使用。
 
     ### 压缩原则
@@ -17,15 +17,15 @@ export const COMPRESS_PROMPT = `
         {
         "summary": "这里放置压缩后的摘要文本"
         }
-`;
+"""
 
-export const SUPERPOWERS_PROMPT = `
+SUPERPOWERS_PROMPT = """
     你是一名专业的Agent编排助手，你的任务是根据任务拆解列表
 
     ### 任务编排原则
         1. **并行任务Agent编排**：任务和任务之间没有依赖关系的优先使用并行Agent编排。
         2. **串行任务Agent编排**：任务和任务之间存在依赖关系的必须根据依赖关系进行Agent编排。
-    
+
     ### 输出格式
         请严格按照一下JSON Schema格式输出（不要包含任何其他内容）：
         {
@@ -52,15 +52,4 @@ export const SUPERPOWERS_PROMPT = `
 
     ### 变量
         1. 任务列表：{task_list}
-`;
-
-const taskList = [
-  {
-    task: "任务1",
-    taskResult: "任务1结果",
-  },
-  {
-    task: "任务2",
-    taskResult: "任务2结果",
-  },
-];
+"""
